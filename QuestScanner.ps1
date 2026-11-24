@@ -2,6 +2,11 @@
 #  Fake Game - Quest Scanner
 # ============================================================
 
+param(
+    [string]$ExportDir,
+    [string]$SpliceBat
+)
+
 $ErrorActionPreference = 'Stop'
 
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
@@ -153,6 +158,62 @@ function Get-Prop($Object, [string]$Name) {
     $property = $Object.PSObject.Properties[$Name]
     if ($property) { return $property.Value }
     return $null
+}
+
+# ---------- Helpers para exportar as quests para o FakeGame.bat ----------
+
+function ConvertTo-BatSafe {
+    # deixa o texto seguro para virar linha "::Q|..." dentro de um .bat
+    param([string]$Text, [int]$Max = 44)
+    if (-not $Text) { return '' }
+    $t = ([string]$Text) -replace '[\r\n\t]+', ' '
+    $t = $t -replace '[|&<>^%!"()\x60]', ' '
+    $t = ($t -replace '\s+', ' ').Trim()
+    if ($t.Length -gt $Max) { $t = $t.Substring(0, [Math]::Max(0, $Max - 3)).TrimEnd() + '...' }
+    return $t
+}
+
+function Get-FakeExeName {
+    # nome do .exe falso; usa o nome real quando a gente conhece o jogo
+    param([string]$Game)
+    $g = ([string]$Game).ToLowerInvariant()
+    $map = @{
+        'where winds meet'    = 'wwm.exe'
+        'arknights endfield'  = 'Endfield.exe'
+        'arknights: endfield' = 'Endfield.exe'
+        'honkai star rail'    = 'StarRail.exe'
+        'honkai: star rail'   = 'StarRail.exe'
+        'eve online'          = 'exefile.exe'
+    }
+    if ($map.ContainsKey($g)) { return $map[$g] }
+    $safe = ($Game -replace '[^A-Za-z0-9]', '')
+    if (-not $safe) { $safe = 'mission' }
+    if ($safe.Length -gt 24) { $safe = $safe.Substring(0, 24) }
+    return $safe + '.exe'
+}
+
+function Update-BatQuestBlock {
+    # substitui so o bloco entre os marcadores, gravando ao lado como .new
+    param([string]$BatPath, [string[]]$BlockLines)
+    if (-not (Test-Path -LiteralPath $BatPath)) { return $false }
+    $utf8  = New-Object System.Text.UTF8Encoding($false)
+    $text  = [IO.File]::ReadAllText($BatPath, $utf8)
+    $begin = ':: ===== QUESTS:BEGIN ====='
+    $end   = ':: ===== QUESTS:END ====='
+    $i = $text.IndexOf($begin, [StringComparison]::Ordinal)
+    $j = $text.IndexOf($end, [StringComparison]::Ordinal)
+    if ($i -lt 0 -or $j -lt 0 -or $j -le $i) { return $false }
+
+    $nl  = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $mid = $nl
+    $lines = @($BlockLines)
+    if ($lines.Count -gt 0) { $mid += ($lines -join $nl) + $nl }
+
+    $newText = $text.Substring(0, $i + $begin.Length) + $mid + $text.Substring($j)
+    if ($newText -ceq $text) { return $false }
+
+    [IO.File]::WriteAllText($BatPath + '.new', $newText, $utf8)
+    return $true
 }
 
 $all      = @{}
@@ -307,6 +368,68 @@ if ($results.Count -eq 0) {
     Write-Host " $($B.Bar) " -ForegroundColor Red    -NoNewline; Write-Host "< 24h   " -ForegroundColor DarkGray -NoNewline
     Write-Host " $($B.Bar) " -ForegroundColor Yellow -NoNewline; Write-Host "< 3 dias   " -ForegroundColor DarkGray -NoNewline
     Write-Host " $($B.Bar) " -ForegroundColor Cyan   -NoNewline; Write-Host "com folga" -ForegroundColor DarkGray
+}
+
+# ============================================================
+#  EXPORTAR / REESCREVER O FakeGame.bat
+# ============================================================
+
+if ($ExportDir -and $sourceOK -gt 0) {
+    try {
+        if (-not (Test-Path -LiteralPath $ExportDir)) {
+            New-Item -ItemType Directory -Path $ExportDir -Force | Out-Null
+        }
+        $utf8  = New-Object System.Text.UTF8Encoding($false)
+        $block = New-Object System.Collections.Generic.List[string]
+        $n     = 0
+
+        foreach ($q in $results) {
+            $n++
+            $game  = ConvertTo-BatSafe $q.Game 40
+            $name  = ConvertTo-BatSafe $q.Name 44
+            $tasks = ConvertTo-BatSafe (($q.Tasks) -join ', ') 40
+            $link  = ConvertTo-BatSafe $q.Link 70
+            $exp   = $q.End.ToLocalTime().ToString('dd/MM HH:mm')
+            $orb   = [int][Math]::Round([double]$q.Orb)
+            $exe   = Get-FakeExeName $q.Game
+            if (-not $name) { $name = 'Missao' }
+            if (-not $game) { $game = 'Jogo' }
+
+            # campo 1 = indice | 2 = jogo | 3 = nome | 4 = orbs | 5 = tarefas
+            # campo 6 = expira | 7 = link | 8 = exe falso
+            $block.Add("::Q|$n|$game|$name|$orb|$tasks|$exp|$link|$exe")
+
+            $txt = @(
+                "MISSAO: $($q.Name)",
+                '',
+                "Jogo: $($q.Game)",
+                "Orbs: $orb",
+                "Tarefas: $(($q.Tasks) -join ', ')",
+                "Expira: $($q.End.ToLocalTime().ToString('dd/MM/yyyy HH:mm'))"
+            )
+            if ($q.Link) { $txt += "Link: $($q.Link)" }
+            $txt += ''
+            $txt += 'Fake Game + Quest Scanner'
+            [IO.File]::WriteAllText((Join-Path $ExportDir "q$n.txt"), ($txt -join "`r`n"), $utf8)
+        }
+
+        [IO.File]::WriteAllLines((Join-Path $ExportDir 'quests.block'), $block, $utf8)
+
+        Write-Host ''
+        if ($SpliceBat) {
+            $changed = Update-BatQuestBlock -BatPath $SpliceBat -BlockLines $block.ToArray()
+            if ($changed) {
+                Write-Status ok "Menu do FakeGame.bat atualizado ($n missoes)."
+            } else {
+                Write-Status info "Menu do FakeGame.bat ja estava atualizado."
+            }
+        } else {
+            Write-Status ok "Quests exportadas para $ExportDir."
+        }
+    }
+    catch {
+        Write-Status warn "Falha ao exportar para o .bat: $($_.Exception.Message)"
+    }
 }
 
 Write-Host ""

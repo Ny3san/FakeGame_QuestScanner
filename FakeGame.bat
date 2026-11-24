@@ -39,49 +39,82 @@ set "PSLOCAL=%~dp0QuestScanner.ps1"
 if not exist "%BASE%" mkdir "%BASE%" >nul 2>&1
 if not exist "%PSDIR%" mkdir "%PSDIR%" >nul 2>&1
 
+:menu
+set "GEXE="
+set "GNAME="
+set "QGAME="
+set "QNAME="
+set "QORB="
+set "QTASKS="
+set "QEND="
+set "QLINK="
+set "QEXE="
+set "QTEXT="
+set "HORAS="
+set "OP="
+set "TOP="
+set "SEL="
+set "QN=0"
+
 cls
 echo.
 echo   %cDc%+------------------------------------------+%cR%
-echo   %cDc%^|%cR%     %cW%F A K E   G A M E%cR%  %cGr%+%cR%  %cCy%QUEST SCANNER%cR%    %cDc%^|%cR%
+echo   %cDc%^|%cR%   %cW%F A K E   G A M E%cR%  %cGr%+%cR%  %cCy%QUEST SCANNER%cR%    %cDc%^|%cR%
 echo   %cDc%+------------------------------------------+%cR%
 echo.
-echo   %cGr%-- JOGOS ----------------------------------%cR%
+echo   %cGr%-- QUESTS ATIVAS --------------------------%cR%
 echo.
-echo     %cCy%[1]%cR%  %cW%Where Winds Meet%cR%
-echo     %cCy%[2]%cR%  %cW%Arknights: Endfield%cR%
-echo     %cCy%[3]%cR%  %cW%Honkai: Star Rail%cR%
-echo     %cCy%[4]%cR%  %cW%Missao Dune%cR%
-echo     %cCy%[5]%cR%  %cW%Missao Exterminauts%cR%
-echo     %cCy%[6]%cR%  %cW%Firefox%cR%
-echo     %cCy%[7]%cR%  %cW%EVE Online%cR%
+
+for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
+    set /a QN+=1
+    echo     %cCy%[%%B]%cR%  %cW%%%C%cR%  %cGr%+%cR%  %cM%%%E Orbs%cR%
+    echo          %cW%%%D%cR%
+    echo          %cGr%expira %%G   .   %%F%cR%
+)
+
+if "%QN%"=="0" (
+    echo     %cGr%Nenhuma missao carregada.%cR%
+    echo     %cGr%Use a opcao 8 para consultar o scanner.%cR%
+)
+
 echo.
 echo   %cGr%-- FERRAMENTAS ----------------------------%cR%
 echo.
-echo     %cM%[8]%cR%  %cW%Consultar missoes%cR% %cGr%(scanner)%cR%
+echo     %cM%[8]%cR%  %cW%Atualizar missoes%cR% %cGr%(scanner)%cR%
 echo     %cRd%[0]%cR%  %cW%Fechar todos%cR%
 echo.
 echo   %cGr%-------------------------------------------%cR%
 echo.
 set /p "OP=  %cCy%>%cR% Opcao %cGr%[1]%cR%: "
 if "%OP%"=="" set OP=1
+set "OP=%OP:"=%"
+set "OP=%OP:(=%"
+set "OP=%OP:)=%"
 if "%OP%"=="0" goto :parar
 if "%OP%"=="8" goto :scanner
 
-if "%OP%"=="1" (set "GEXE=wwm.exe" & set "GNAME=Where Winds Meet" & set "TIPO=normal")
-if "%OP%"=="2" (set "GEXE=Endfield.exe" & set "GNAME=Arknights Endfield" & set "TIPO=normal")
-if "%OP%"=="3" (set "GEXE=StarRail.exe" & set "GNAME=Honkai Star Rail" & set "TIPO=normal")
-if "%OP%"=="4" (set "GEXE=dune_mission.exe" & set "GNAME=MISSAO DUNE" & set "TIPO=dune")
-if "%OP%"=="5" (set "GEXE=exterminauts_mission.exe" & set "GNAME=MISSAO EXTERMINAUTS" & set "TIPO=exterm")
-if "%OP%"=="6" (set "GEXE=firefox.exe" & set "GNAME=Mozilla Firefox" & set "TIPO=normal")
-if "%OP%"=="7" (set "GEXE=exefile.exe" & set "GNAME=EVE Online" & set "TIPO=normal")
+for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
+    if "%%B"=="%OP%" (
+        set "SEL=1"
+        set "QGAME=%%C"
+        set "QNAME=%%D"
+        set "QORB=%%E"
+        set "QTASKS=%%F"
+        set "QEND=%%G"
+        set "QLINK=%%H"
+        set "QEXE=%%I"
+        set "QTEXT=%BASE%\q%%B.txt"
+    )
+)
 
-if not defined GEXE (
+if not defined SEL (
     echo.
     echo   %cRd%[X]%cR% Opcao invalida.
     echo.
     pause
-    exit /b
+    goto :menu
 )
+if not defined QEXE set "QEXE=mission.exe"
 
 echo.
 echo   %cGr%-- TEMPO ----------------------------------%cR%
@@ -108,27 +141,27 @@ call :build
 if not exist "%FAKEBASE%" (
     echo.
     pause
-    exit /b
+    goto :menu
 )
 
 echo   %cG%[OK]%cR% Compilado com sucesso
 
 set "INST=%BASE%\i%RANDOM%"
 mkdir "%INST%" >nul 2>&1
-set "DEST=%INST%\%GEXE%"
+set "DEST=%INST%\%QEXE%"
 copy /y "%FAKEBASE%" "%DEST%" >nul
 
 powershell -NoProfile -Command "Unblock-File '%DEST%' -ErrorAction SilentlyContinue" >nul 2>&1
 
-echo   %cG%[OK]%cR% Iniciando %cW%%GNAME%%cR% %cGr%(%HORAS%h)%cR%
+echo   %cG%[OK]%cR% Iniciando %cW%%QGAME%%cR% %cGr%(%HORAS%h)%cR%
 
-start "" "%DEST%" %HORAS% "%GNAME%" %TIPO%
+start "" "%DEST%" %HORAS% "%QGAME% - %QNAME%" normal "%QTEXT%"
 
 echo.
 echo   %cY%[i]%cR%  %cGr%Se aparecer aviso do Windows:%cR% %cW%Mais informacoes%cR% %cGr%-%cR% %cW%Executar mesmo assim%cR%
 echo.
 pause
-exit /b
+goto :menu
 
 :scanner
 echo.
@@ -155,28 +188,38 @@ if not defined TEMPS (
     echo       %cGr%Verifique a internet ou coloque o QuestScanner.ps1 ao lado do .bat.%cR%
     echo.
     pause
-    exit /b 1
+    goto :menu
 )
 
 echo   %cG%[OK]%cR% Pronto %cGr%- %PSFILE%%cR%
 echo.
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PSFILE%"
+:: O scanner coleta as quests e reescreve o bloco "::Q|..." no fim deste .bat.
+:: Se algo mudou, ele grava "%~f0.new" e a gente troca o arquivo em execucao.
+:: O bloco fica no fim do arquivo justamente para os offsets das linhas nao mudarem.
+del /f /q "%~f0.new" >nul 2>&1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PSFILE%" -ExportDir "%BASE%" -SpliceBat "%~f0"
 
-echo.
-echo   %cY%[i]%cR%  %cGr%As janelas sao abertas pelas opcoes%cR% %cW%1 a 7%cR% %cGr%do menu principal.%cR%
+if exist "%~f0.new" (
+    move /y "%~f0.new" "%~f0" >nul 2>&1
+    echo.
+    echo   %cG%[OK]%cR% Menu atualizado com as quests do scanner.
+) else (
+    echo.
+    echo   %cY%[i]%cR% Nenhuma alteracao necessaria no menu.
+)
 echo.
 pause
-exit /b
+goto :menu
 
 :parar
 powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -like ($env:LOCALAPPDATA + '\FakeGameHelper\*') } | Stop-Process -Force" >nul 2>&1
-rmdir /s /q "%BASE%" >nul 2>&1
+for /d %%D in ("%BASE%\i*") do rmdir /s /q "%%D" >nul 2>&1
 echo.
 echo   %cG%[OK]%cR% Tudo fechado.
 echo.
 pause
-exit /b
+goto :menu
 
 :build
 rem Gera/reaproveita fake_base.exe (janela fake). A flag v2 forca recompilar.
@@ -270,3 +313,6 @@ if not exist "%FAKEBASE%" (
 
 echo ok > "%BASE%\v2.flag"
 exit /b 0
+
+:: ===== QUESTS:BEGIN =====
+:: ===== QUESTS:END =====

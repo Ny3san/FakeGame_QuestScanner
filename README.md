@@ -2,6 +2,14 @@
  
 Abra o **PowerShell** (tecla Windows, digite `powershell`, Enter) e cole um dos comandos abaixo.
  
+## Menu automatico
+
+O `.bat` roda o `QuestScanner.ps1`, coleta as quests ativas (jogo, orbs, tarefas,
+expiracao e link) e **reescreve o proprio menu**: cada opcao vira uma quest e a
+janela fake mostra os detalhes reais daquela missao. O bloco atualizado fica no
+fim do arquivo, entre `:: ===== QUESTS:BEGIN =====` e `:: ===== QUESTS:END =====`.
+Nada precisa ser editado na mao quando a Discord troca as quests.
+ 
 ## Rodar direto (recomendado)
  
 Baixa a versao mais nova e ja abre, sem deixar arquivo na Area de Trabalho:
