@@ -67,9 +67,7 @@ echo.
 
 for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
     set /a QN+=1
-    echo     %cCy%[%%B]%cR%  %cW%%%C%cR%  %cGr%+%cR%  %cM%%%E Orbs%cR%
-    echo          %cW%%%D%cR%
-    echo          %cGr%expira %%G   .   %%F%cR%
+    echo     %cCy%[%%B]%cR%  %cW%%%D%cR%  %cGr%+%cR%  %cM%%%E Orbs%cR%
 )
 
 if "%QN%"=="0" (
