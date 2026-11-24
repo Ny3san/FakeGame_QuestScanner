@@ -28,8 +28,8 @@ color 0B
 set "BASE=%LOCALAPPDATA%\FakeGameHelper"
 set "FAKEBASE=%BASE%\fake_base.exe"
 
-:: De onde o scanner .ps1 e baixado (link raw do GitHub)
-set "PSURL=https://raw.githubusercontent.com/Ny3san/FakeGame_QuestScanner/main/QuestScanner.ps1"
+:: De onde o scanner .ps1 e baixado (API do GitHub = sem cache atrasado do raw)
+set "PSURL=https://api.github.com/repos/Ny3san/FakeGame_QuestScanner/contents/QuestScanner.ps1?ref=main"
 :: Copia baixada, executada a partir da pasta temp
 set "PSDIR=%TEMP%\FakeGameHelper"
 set "PSFILE=%PSDIR%\QuestScanner.ps1"
@@ -170,22 +170,29 @@ echo   %cY%[..]%cR% Baixando o QuestScanner.ps1...
 set "TEMPS="
 del /f /q "%PSFILE%" >nul 2>&1
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri ('%PSURL%' + '?t=' + [DateTime]::UtcNow.Ticks) -OutFile '%PSFILE%' -TimeoutSec 20; exit 0 } catch { exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Headers @{'Accept'='application/vnd.github.raw'; 'User-Agent'='FakeGame'} -Uri ('%PSURL%' + '&t=' + [DateTime]::UtcNow.Ticks) -OutFile '%PSFILE%' -TimeoutSec 25; exit 0 } catch { exit 1 }"
 if exist "%PSFILE%" for %%A in ("%PSFILE%") do if %%~zA GTR 2000 set "TEMPS=1"
+
+:: Se o arquivo baixado for uma versao antiga (sem exportacao), descarta e usa a copia local.
+if defined TEMPS (
+    findstr /c:"SpliceBat" "%PSFILE%" >nul 2>&1
+    if errorlevel 1 set "TEMPS="
+)
 
 if not defined TEMPS (
     del /f /q "%PSFILE%" >nul 2>&1
     if exist "%PSLOCAL%" (
-        echo   %cY%[i]%cR% Nao consegui baixar. Usando a copia local como reserva...
+        echo   %cY%[i]%cR% Baixei uma versao antiga ou falhou. Usando a copia local...
         copy /y "%PSLOCAL%" "%PSFILE%" >nul
-        set "TEMPS=1"
+        findstr /c:"SpliceBat" "%PSFILE%" >nul 2>&1
+        if not errorlevel 1 set "TEMPS=1"
     )
 )
 
 if not defined TEMPS (
     echo.
-    echo   %cRd%[X]%cR% Nao foi possivel baixar o QuestScanner.ps1.
-    echo       %cGr%Verifique a internet ou coloque o QuestScanner.ps1 ao lado do .bat.%cR%
+    echo   %cRd%[X]%cR% O QuestScanner.ps1 baixado esta desatualizado e nao ha copia local valida.
+    echo       %cGr%Baixe o QuestScanner.ps1 novo e coloque ao lado do .bat, ou tente de novo em alguns minutos.%cR%
     echo.
     pause
     goto :menu
@@ -315,4 +322,9 @@ echo ok > "%BASE%\v2.flag"
 exit /b 0
 
 :: ===== QUESTS:BEGIN =====
+::Q|1|Arknights: Endfield|New Operator: Argent Flow|700|PLAY_ON_DESKTOP, PLAY_ON_PLAYSTATION|25/11 01:00|https://akendfield.gryphline.com/d27t/V1D6DPQ|Endfield.exe
+::Q|2|Roblox|Illegal Soccer|700|PLAY_ON_DESKTOP|25/11 22:00|https://www.roblox.com/pl/games/126987974021910/Illegal-Soccer?gsrb...|Roblox.exe
+::Q|3|Firefox|Firefox Browser|700|PLAY_ON_DESKTOP|06/12 22:00|https://firefox.com/get/?p=discord utm_source=discord utm_campaign=...|Firefox.exe
+::Q|4|EVE Online|EVE Online|700|PLAY_ON_DESKTOP|07/12 22:00|https://www.eveonline.com/?utm_source=discord utm_medium=cpm utm_ca...|exefile.exe
+::Q|5|Where Winds Meet|Anniversary Claim over $150 in rewards|700|PLAY_ON_DESKTOP, PLAY_ON_PLAYSTATION|19/12 04:59|https://store.steampowered.com/app/3564740/480?utm_source=DiscordOrbs|wwm.exe
 :: ===== QUESTS:END =====

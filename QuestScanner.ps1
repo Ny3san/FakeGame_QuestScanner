@@ -168,6 +168,10 @@ function ConvertTo-BatSafe {
     if (-not $Text) { return '' }
     $t = ([string]$Text) -replace '[\r\n\t]+', ' '
     $t = $t -replace '[|&<>^%!"()\x60]', ' '
+    # mantem o .bat 100% ASCII: tira acentos e troca sobras por "?"
+    $t = $t.Normalize([Text.NormalizationForm]::FormD)
+    $t = $t -replace '\p{M}', ''
+    $t = $t -replace '[^\x00-\x7F]', '?'
     $t = ($t -replace '\s+', ' ').Trim()
     if ($t.Length -gt $Max) { $t = $t.Substring(0, [Math]::Max(0, $Max - 3)).TrimEnd() + '...' }
     return $t
