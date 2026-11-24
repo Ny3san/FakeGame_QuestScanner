@@ -21,3 +21,27 @@ irm https://raw.githubusercontent.com/Ny3san/FakeGame_QuestScanner/main/FakeGame
  
 O `QuestScanner.ps1` nao precisa ser baixado: o `.bat` baixa sozinho quando voce escolhe a opcao 8.
  
+---
+ 
+## Linux (somente o Quest Scanner)
+ 
+O `.bat` e exclusivo do Windows. No Linux da para rodar apenas o scanner de missoes.
+ 
+### 1. Instalar o PowerShell (Fedora)
+ 
+```bash
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+curl -sSL https://packages.microsoft.com/config/rhel/9/prod.repo | sudo tee /etc/yum.repos.d/microsoft.repo
+sudo dnf install powershell
+```
+ 
+> Se o `dnf` reclamar de dependencia, baixe o `.rpm` mais recente em
+> https://github.com/PowerShell/PowerShell/releases e instale com
+> `sudo dnf install ./powershell-*.rpm`.
+ 
+### 2. Rodar o scanner
+ 
+```bash
+pwsh -c "irm https://raw.githubusercontent.com/Ny3san/FakeGame_QuestScanner/main/QuestScanner.ps1 | iex"
+```
+ 
