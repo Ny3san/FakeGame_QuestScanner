@@ -440,3 +440,4 @@ Write-Host ""
 Write-Divider
 Write-Status ok "Consulta finalizada."
 Write-Host ""
+        
