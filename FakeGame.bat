@@ -55,43 +55,50 @@ set "OP="
 set "TOP="
 set "SEL="
 set "QN=0"
+for /f "delims==" %%v in ('set MAP_ 2^>nul') do set "%%v="
 
 cls
 echo.
-echo   %cDc%╔══════════════════════════════════════════════════════════════╗%cR%
-echo   %cDc%║%cR%             %cW%F A K E   G A M E%cR%  %cGr%+%cR%  %cCy%QUEST SCANNER%cR%              %cDc%║%cR%
-echo   %cDc%║%cR%        %cGr%gerenciador de missoes  •  scanner automatico%cR%         %cDc%║%cR%
-echo   %cDc%╚══════════════════════════════════════════════════════════════╝%cR%
+echo   %cDc%╔════════════════════════════════════════════════════════════════════════╗%cR%
+echo   %cDc%║%cR%                                                                        %cDc%║%cR%
+echo   %cDc%║%cR%                  %cW%F A K E   G A M E%cR%  %cGr%+%cR%  %cCy%QUEST SCANNER%cR%                   %cDc%║%cR%
+echo   %cDc%║%cR%             %cGr%gerenciador de missoes  •  scanner automatico%cR%              %cDc%║%cR%
+echo   %cDc%║%cR%                                                                        %cDc%║%cR%
+echo   %cDc%╚════════════════════════════════════════════════════════════════════════╝%cR%
 echo.
-:: tempo restante de cada quest (1 chamada de PowerShell; se falhar, mostra a data)
-for /f "usebackq tokens=1-3 delims=;" %%a in (`powershell -NoProfile -Command "$n=Get-Date;$y=$n.Year;foreach($l in Get-Content -LiteralPath '%~f0' -Encoding UTF8){if($l.StartsWith('::Q')){$p=$l.Split([char]124);try{$d=[datetime]::ParseExact(('{0}/{1}' -f $y,$p[6]),'yyyy/dd/MM HH:mm',$null)}catch{continue};if($d -lt $n.AddDays(-1)){$d=$d.AddYears(1)};$t=$d-$n;if($t.TotalHours -ge 24){$s='{0}d {1}h' -f [int][math]::Floor($t.TotalDays),$t.Hours}elseif($t.TotalMinutes -gt 0){$s='{0}h {1}min' -f [int][math]::Floor($t.TotalHours),$t.Minutes}else{$s='expirada'};$c=if($t.TotalHours -lt 24){'R'}elseif($t.TotalDays -lt 3){'Y'}else{'C'};'{0};{1};{2}' -f $p[1],$s,$c}}" 2^>nul`) do (set "UT_%%a=%%b" & set "UL_%%a=%%c")
-echo   %cDc%╭─%cR% %cW%QUESTS ATIVAS%cR% %cDc%────────────────────────────────────────────────%cR%
+for /f "usebackq tokens=1-3 delims=;" %%a in (`powershell -NoProfile -Command "$n=Get-Date;$y=$n.Year;foreach($l in Get-Content -LiteralPath '%~f0' -Encoding UTF8){if($l.StartsWith('::Q')){$p=$l.Split([char]124);try{$d=[datetime]::ParseExact(('{0}/{1}' -f $y,$p[6]),'yyyy/dd/MM HH:mm',$null)}catch{continue};if($d -lt $n.AddDays(-300)){$d=$d.AddYears(1)};$t=$d-$n;if($t.TotalHours -ge 24){$s='{0}d {1}h' -f [int][math]::Floor($t.TotalDays),$t.Hours}elseif($t.TotalMinutes -gt 0){$s='{0}h {1}min' -f [int][math]::Floor($t.TotalHours),$t.Minutes}else{$s='expirada'};$c=if($t.TotalHours -lt 24){'R'}elseif($t.TotalDays -lt 3){'Y'}else{'C'};'{0};{1};{2}' -f $p[1],$s,$c}}" 2^>nul`) do (set "UT_%%a=%%b" & set "UL_%%a=%%c")
+echo   %cDc%╭─%cR% %cW%QUESTS ATIVAS%cR% %cDc%────────────────────────────────────────────────────────%cR%─
 echo   %cDc%│%cR%
 set "TOT=0"
 for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
-    set /a QN+=1
-    set /a TOT+=%%E
-    set "NM=%%D                                        "
-    set "UC=%cG%"
-    set "UT=ate %%G"
-    if defined UT_%%B set "UT=faltam !UT_%%B!"
-    if "!UL_%%B!"=="R" set "UC=%cRd%"
-    if "!UL_%%B!"=="Y" set "UC=%cY%"
-    echo   %cDc%│%cR%  !UC!●%cR%  %cCy%[%%B]%cR%  %cW%!NM:~0,38!%cR%  %cM%%%E Orbs%cR%  !UC!!UT!%cR%
+    if /i not "!UT_%%B!"=="expirada" (
+        set /a QN+=1
+        set /a TOT+=%%E
+        set "MAP_!QN!=%%B"
+        set "UC=%cG%"
+        set "UT=ate %%G"
+        if defined UT_%%B set "UT=faltam !UT_%%B!"
+        if "!UL_%%B!"=="R" set "UC=%cRd%"
+        if "!UL_%%B!"=="Y" set "UC=%cY%"
+        echo   %cDc%│%cR%  !UC!●%cR%  %cCy%[!QN!]%cR%  %cW%%%D%cR%
+        echo   %cDc%│%cR%        %cGr%%%C  •%cR%  %cM%%%E Orbs%cR%  %cGr%•%cR%  !UC!!UT!%cR%
+        echo   %cDc%│%cR%
+    )
 )
 
 if "%QN%"=="0" (
-    echo   %cDc%│%cR%  %cGr%Nenhuma missao carregada.%cR%
+    echo   %cDc%│%cR%  %cGr%Nenhuma missao ativa.%cR%
     echo   %cDc%│%cR%  %cGr%Use a opcao 8 para consultar o scanner.%cR%
+    echo   %cDc%│%cR%
 )
-echo   %cDc%│%cR%
-echo   %cDc%╰─%cR% %cW%%QN%%cR% %cGr%missoes  •%cR% %cM%%TOT% Orbs%cR% %cGr%no total   %cRd%●%cR%%cGr% ^<24h  %cY%●%cR%%cGr% ^<3d  %cG%●%cR%%cGr% folga%cR%
+echo   %cDc%╰───%cR% %cW%%QN%%cR% %cGr%missoes  •%cR% %cM%%TOT% Orbs%cR% %cGr%no total     %cRd%●%cR%%cGr% ^<24h  %cY%●%cR%%cGr% ^<3d  %cG%●%cR%%cGr% folga%cR%
 echo.
-echo   %cDc%╭─%cR% %cW%FERRAMENTAS%cR% %cDc%─────────────────────────────────────────────────%cR%
+echo   %cDc%╭─%cR% %cW%FERRAMENTAS%cR% %cDc%──────────────────────────────────────────────────────────%cR%─
 echo   %cDc%│%cR%
-echo   %cDc%│%cR%  %cM%[8]%cR%  %cW%Atualizar missoes%cR% %cGr%(scanner)%cR%
+echo   %cDc%│%cR%  %cM%[8]%cR%  %cW%Atualizar missoes%cR%  %cGr%(scanner)%cR%
 echo   %cDc%│%cR%  %cRd%[0]%cR%  %cW%Fechar todos%cR%
-echo   %cDc%╰────────────────────────────────────────────────────────────%cR%
+echo   %cDc%│%cR%
+echo   %cDc%╰─────────────────────────────────────────────────────────────────────────%cR%
 echo.
 set /p "OP=  %cCy%❯%cR% Opcao %cGr%[1]%cR%: "
 if "%OP%"=="" set OP=1
@@ -100,6 +107,7 @@ set "OP=%OP:(=%"
 set "OP=%OP:)=%"
 if "%OP%"=="0" goto :parar
 if "%OP%"=="8" goto :scanner
+if defined MAP_%OP% (set "OP=!MAP_%OP%!") else set "OP=x"
 
 for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
     if "%%B"=="%OP%" (
@@ -127,13 +135,14 @@ if not defined QEXE set "QEXE=mission.exe"
 echo.
 echo   %cGr%Missao:%cR% %cW%%QGAME%%cR% %cGr%-%cR% %cW%%QNAME%%cR%  %cM%%QORB% Orbs%cR%
 echo.
-echo   %cDc%╭─%cR% %cW%TEMPO%cR% %cDc%───────────────────────────────────────────────────────%cR%
+echo   %cDc%╭─%cR% %cW%TEMPO%cR% %cDc%────────────────────────────────────────────────────────────────%cR%─
 echo   %cDc%│%cR%
 echo   %cDc%│%cR%  %cCy%[1]%cR%  %cW%15 min%cR%
 echo   %cDc%│%cR%  %cCy%[2]%cR%  %cW%30 min%cR%
 echo   %cDc%│%cR%  %cCy%[3]%cR%  %cW%1 hora%cR%
 echo   %cDc%│%cR%  %cCy%[4]%cR%  %cW%2 horas%cR%
-echo   %cDc%╰────────────────────────────────────────────────────────────%cR%
+echo   %cDc%│%cR%
+echo   %cDc%╰─────────────────────────────────────────────────────────────────────────%cR%
 echo.
 set /p "TOP=  %cCy%❯%cR% Opcao %cGr%[1]%cR%: "
 if "%TOP%"=="" set TOP=1
