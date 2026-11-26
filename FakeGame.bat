@@ -26,8 +26,8 @@ if %errorlevel% neq 0 (
 setlocal EnableDelayedExpansion
 title Fake Game + Quest Scanner
 color 0B
-rem janela maior + fonte Consolas (so nesta janela; falha em silencio)
-powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class F{[StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]public struct I{public uint cb;public uint n;public short x;public short y;public int fam;public int w;[MarshalAs(UnmanagedType.ByValTStr,SizeConst=32)]public string f;}[DllImport(\"kernel32.dll\")]public static extern IntPtr GetStdHandle(int h);[DllImport(\"kernel32.dll\",CharSet=CharSet.Unicode)]public static extern bool SetCurrentConsoleFontEx(IntPtr h,bool m,ref I i);public static void S(){I i=new I();i.cb=(uint)Marshal.SizeOf(i);i.y=18;i.fam=54;i.w=400;i.f=\"Consolas\";SetCurrentConsoleFontEx(GetStdHandle(-11),false,ref i);}}'; [F]::S()" >nul 2>&1
+rem janela maior + fonte Cascadia Mono (mostra os simbolos; Consolas de reserva) (so nesta janela; falha em silencio)
+powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class F{[StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]public struct I{public uint cb;public uint n;public short x;public short y;public int fam;public int w;[MarshalAs(UnmanagedType.ByValTStr,SizeConst=32)]public string f;}[DllImport(\"kernel32.dll\")]public static extern IntPtr GetStdHandle(int h);[DllImport(\"kernel32.dll\",CharSet=CharSet.Unicode)]public static extern bool SetCurrentConsoleFontEx(IntPtr h,bool m,ref I i);public static void S(){I i=new I();i.cb=(uint)Marshal.SizeOf(i);i.y=18;i.fam=54;i.w=400;i.f=System.IO.File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.Windows)+\"/Fonts/CascadiaMono.ttf\")?\"Cascadia Mono\":\"Consolas\";SetCurrentConsoleFontEx(GetStdHandle(-11),false,ref i);}}'; [F]::S()" >nul 2>&1
 mode con: cols=100 lines=56 >nul 2>&1
 
 set "BASE=%LOCALAPPDATA%\FakeGameHelper"
