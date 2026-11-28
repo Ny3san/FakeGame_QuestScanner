@@ -26,9 +26,14 @@ if %errorlevel% neq 0 (
 setlocal EnableDelayedExpansion
 title Fake Game + Quest Scanner
 color 0B
+rem Windows Terminal: pula tudo abaixo ("mode con" la apaga a rolagem; fonte/tamanho vem das configuracoes dele)
+if defined WT_SESSION goto :semjanela
 rem janela maior + fonte Cascadia Mono (mostra os simbolos; Consolas de reserva) (so nesta janela; falha em silencio)
 powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class F{[StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]public struct I{public uint cb;public uint n;public short x;public short y;public int fam;public int w;[MarshalAs(UnmanagedType.ByValTStr,SizeConst=32)]public string f;}[DllImport(\"kernel32.dll\")]public static extern IntPtr GetStdHandle(int h);[DllImport(\"kernel32.dll\",CharSet=CharSet.Unicode)]public static extern bool SetCurrentConsoleFontEx(IntPtr h,bool m,ref I i);public static void S(){I i=new I();i.cb=(uint)Marshal.SizeOf(i);i.y=18;i.fam=54;i.w=400;i.f=System.IO.File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.Windows)+\"/Fonts/CascadiaMono.ttf\")?\"Cascadia Mono\":\"Consolas\";SetCurrentConsoleFontEx(GetStdHandle(-11),false,ref i);}}'; [F]::S()" >nul 2>&1
 mode con: cols=100 lines=56 >nul 2>&1
+rem "mode con" iguala o buffer a janela (sem barra de rolagem); aumenta o buffer para poder rolar
+powershell -NoProfile -Command "try{$r=$Host.UI.RawUI;$r.BufferSize=New-Object Management.Automation.Host.Size($r.WindowSize.Width,3000)}catch{}" >nul 2>&1
+:semjanela
 
 set "BASE=%LOCALAPPDATA%\FakeGameHelper"
 set "FAKEBASE=%BASE%\fake_base.exe"
@@ -105,7 +110,7 @@ for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do 
 
 if "%QN%"=="0" (
     echo.
-    echo %M%%cGr%Nenhuma missao ativa. Use a opcao 8 para consultar o scanner.%cR%
+    echo %M%%cGr%Nenhuma missao ativa. Use a opcao S para consultar o scanner.%cR%
 )
 echo.
 echo %M%%cGr%Missoes   %cR%%cW%%QN%%cR%
@@ -115,7 +120,8 @@ echo %M%%cRd%┃%cR% %cGr%^< 24h   %cY%┃%cR% %cGr%^< 3 dias   %cCy%┃%cR% %cG
 echo.
 echo %M%%cDc%── FERRAMENTAS ────────────────────────────────────────────────────────%cR%
 echo.
-echo %M%%cM%[8]%cR%  %cW%Atualizar missoes%cR%  %cGr%(scanner)%cR%
+echo %M%%cM%[S]%cR%  %cW%Atualizar missoes%cR%  %cGr%(scanner)%cR%
+echo %M%%cG%[A]%cR%  %cW%Abrir todas as quests%cR%
 echo %M%%cRd%[0]%cR%  %cW%Fechar todos%cR%
 echo.
 set /p "OP=%MC%%cCy%❯%cR% Opcao %cGr%[1]%cR%: "
@@ -124,7 +130,8 @@ set "OP=%OP:"=%"
 set "OP=%OP:(=%"
 set "OP=%OP:)=%"
 if "%OP%"=="0" goto :parar
-if "%OP%"=="8" goto :scanner
+if /i "%OP%"=="S" goto :scanner
+if /i "%OP%"=="A" goto :todas
 if defined MAP_%OP% (set "OP=!MAP_%OP%!") else set "OP=x"
 
 for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
@@ -255,6 +262,49 @@ echo.
 pause
 goto :menu
 
+:todas
+echo.
+echo %M%%cDc%── TEMPO (todas) ──────────────────────────────────────────────────────%cR%
+echo.
+echo %M%%cCy%[1]%cR%  %cW%15 min%cR%
+echo %M%%cCy%[2]%cR%  %cW%30 min%cR%
+echo %M%%cCy%[3]%cR%  %cW%1 hora%cR%
+echo %M%%cCy%[4]%cR%  %cW%2 horas%cR%
+echo.
+set /p "TOP=%MC%%cCy%❯%cR% Opcao %cGr%[1]%cR%: "
+if "%TOP%"=="" set TOP=1
+if "%TOP%"=="1" set HORAS=0.25
+if "%TOP%"=="2" set HORAS=0.5
+if "%TOP%"=="3" set HORAS=1
+if "%TOP%"=="4" set HORAS=2
+if not defined HORAS set HORAS=0.25
+call :build
+if not exist "%FAKEBASE%" (
+    pause
+    goto :menu
+)
+echo.
+rem uma janela por executavel (as variantes de idioma do Roblox abririam repetidas)
+for /f "usebackq tokens=1-9 delims=|" %%A in (`findstr /b /c:"::Q|" "%~f0"`) do (
+    if /i not "!UT_%%B!"=="expirada" (
+        set "X=%%I"
+        if not defined X set "X=mission.exe"
+        if not defined DX_!X! (
+            set "DX_!X!=1"
+            set "INST=%BASE%\i!RANDOM!"
+            mkdir "!INST!" >nul 2>&1
+            copy /y "%FAKEBASE%" "!INST!\!X!" >nul
+            powershell -NoProfile -Command "Unblock-File '!INST!\!X!' -ErrorAction SilentlyContinue" >nul 2>&1
+            start "" "!INST!\!X!" %HORAS% "%%C - %%D" normal "%BASE%\q%%B.txt"
+            echo   %cG%[OK]%cR% %cW%%%C%cR% %cGr%^(%HORAS%h^)%cR%
+        )
+    )
+)
+for /f "delims==" %%v in ('set DX_ 2^>nul') do set "%%v="
+echo.
+pause
+goto :menu
+
 :parar
 powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -like ($env:LOCALAPPDATA + '\FakeGameHelper\*') } | Stop-Process -Force" >nul 2>&1
 for /d %%D in ("%BASE%\i*") do rmdir /s /q "%%D" >nul 2>&1
@@ -358,9 +408,15 @@ echo ok > "%BASE%\v2.flag"
 exit /b 0
 
 :: ===== QUESTS:BEGIN =====
-::Q|1|Arknights: Endfield|New Operator: Argent Flow|700|PLAY_ON_DESKTOP, PLAY_ON_PLAYSTATION|25/11 01:00|https://akendfield.gryphline.com/d27t/V1D6DPQ|Endfield.exe
-::Q|2|Roblox|Illegal Soccer|700|PLAY_ON_DESKTOP|25/11 22:00|https://www.roblox.com/pl/games/126987974021910/Illegal-Soccer?gsrb...|Roblox.exe
-::Q|3|Firefox|Firefox Browser|700|PLAY_ON_DESKTOP|06/12 22:00|https://firefox.com/get/?p=discord utm_source=discord utm_campaign=...|Firefox.exe
-::Q|4|EVE Online|EVE Online|700|PLAY_ON_DESKTOP|07/12 22:00|https://www.eveonline.com/?utm_source=discord utm_medium=cpm utm_ca...|exefile.exe
-::Q|5|Where Winds Meet|Anniversary Claim over $150 in rewards|700|PLAY_ON_DESKTOP, PLAY_ON_PLAYSTATION|19/12 04:59|https://store.steampowered.com/app/3564740/480?utm_source=DiscordOrbs|wwm.exe
+::Q|1|Arkheron|ARKHERON Early Access|700|PLAY_ON_DESKTOP, PLAY_ON_XBOX, PLAY_O...|30/11 03:00|https://playarkheron.openworld.gg/freetoplay/|Arkheron.exe
+::Q|2|Roblox|juego de boxeo sin titulo|700|PLAY_ON_DESKTOP|05/12 22:00|https://www.roblox.com/es/games/13621938427/untitled-boxing-game?gs...|Roblox.exe
+::Q|3|Roblox|Game tinju tanpa judul|700|PLAY_ON_DESKTOP|05/12 22:00|https://www.roblox.com/id/games/13621938427/untitled-boxing-game?gs...|Roblox.exe
+::Q|4|Roblox|Untitled Boxing Game|700|PLAY_ON_DESKTOP|05/12 22:00|https://www.roblox.com/games/13621938427/untitled-boxing-game?gsrbx...|Roblox.exe
+::Q|5|Roblox|bez tytu?u gra bokserska|700|PLAY_ON_DESKTOP|05/12 22:00|https://www.roblox.com/pl/games/13621938427/untitled-boxing-gamer?g...|Roblox.exe
+::Q|6|Roblox|????????????|700|PLAY_ON_DESKTOP|05/12 22:00|https://www.roblox.com/th/games/13621938427/untitled-boxing-game?gs...|Roblox.exe
+::Q|7|Roblox|unbetiteltes Boxspiel|700|PLAY_ON_DESKTOP|05/12 22:00|https://www.roblox.com/de/games/13621938427/untitled-boxing-game?gs...|Roblox.exe
+::Q|8|Firefox|Firefox Browser|700|PLAY_ON_DESKTOP|06/12 22:00|https://firefox.com/get/?p=discord utm_source=discord utm_campaign=...|Firefox.exe
+::Q|9|EVE Online|EVE Online|700|PLAY_ON_DESKTOP|07/12 22:00|https://www.eveonline.com/?utm_source=discord utm_medium=cpm utm_ca...|exefile.exe
+::Q|10|Arknights: Endfield|Version Update: Kay|700|PLAY_ON_DESKTOP, PLAY_ON_PLAYSTATION|08/12 01:00|https://akendfield.gryphline.com/d27t/V1D7DPQ1|Endfield.exe
+::Q|11|Where Winds Meet|Anniversary Claim over $150 in rewards|700|PLAY_ON_DESKTOP, PLAY_ON_PLAYSTATION|19/12 04:59|https://store.steampowered.com/app/3564740/480?utm_source=DiscordOrbs|wwm.exe
 :: ===== QUESTS:END =====
